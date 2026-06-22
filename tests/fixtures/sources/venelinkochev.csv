@@ -1,0 +1,4 @@
+BIN,Brand,Type,Category,Issuer,IssuerPhone,IssuerUrl,isoCode2,isoCode3,CountryName
+002102,"PRIVATE LABEL",CREDIT,STANDARD,"CHINA MERCHANTS BANK",95555,https://english.cmbchina.com,CN,CHN,CHINA
+002195,VISA,DEBIT,,"CHINA MERCHANTS BANK",,https://english.cmbchina.com,CN,CHN,CHINA
+bad-bin,VISA,CREDIT,STANDARD,Invalid Bank,,,US,USA,UNITED STATES

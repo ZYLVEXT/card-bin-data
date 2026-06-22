@@ -1,0 +1,10 @@
+[submodule "datasets/binlist_data"]
+	path = datasets/binlist_data
+	url = https://github.com/binlist/data.git
+[submodule "datasets/venelinkochev_binlist_data"]
+	path = datasets/venelinkochev_binlist_data
+	url = https://github.com/venelinkochev/bin-list-data.git
+
+[submodule "datasets/marlonlp_binlist_data"]
+	path = datasets/marlonlp_binlist_data
+	url = https://github.com/marlonlp/binlist-data.git

@@ -1,0 +1,150 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+exclude = "^(uv.lock|.vscode/)"
+default_install_hook_types = [
+  "pre-commit",
+  "commit-msg"
+  ]
+default_language_version = { python = "python3.12" }
+
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "ruff-lint",
+    name = "ruff lint",
+    entry = "uv run ruff check --force-exclude",
+    args = [
+      "--fix",
+      "--exit-non-zero-on-fix",
+      "--preview"
+    ],
+    types_or = [
+      "python",
+      "pyi"
+    ],
+    language = "system"
+  },
+  {
+    id = "ruff-format",
+    name = "ruff format",
+    entry = "uv run ruff format --force-exclude",
+    args = ["--preview"],
+    types_or = [
+      "python",
+      "pyi"
+    ],
+    language = "system"
+  },
+  {
+    id = "ty-check",
+    name = "ty-check",
+    entry = "uv run ty check",
+    types_or = [
+      "python",
+      "pyi"
+    ],
+    language = "system",
+    pass_filenames = false
+  },
+  {
+    id = "deptry",
+    name = "deptry",
+    entry = "uv run deptry .",
+    language = "system",
+    pass_filenames = false
+  },
+  {
+    id = "pip-audit",
+    name = "pip-audit",
+    entry = "uv run pip-audit",
+    args = ["--ignore-vuln=CVE-2026-3219"],
+    language = "system",
+    pass_filenames = false
+  },
+  {
+    id = "commitizen",
+    name = "commitizen check",
+    entry = "uv run cz check --allow-abort --commit-msg-file",
+    language = "system",
+    stages = ["commit-msg"]
+  }
+]
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "3e8a8703264a2f4a69428a0aa4dcb512790b2c8c"
+hooks = [
+  {
+    id = "check-added-large-files",
+    exclude = "^datasets/marlonlp_binlist_data/binlist-data.csv|datasets/venelinkochev_binlist_data/bin-list-data.csv"
+  },
+  { id = "check-ast" },
+  { id = "check-builtin-literals" },
+  { id = "check-case-conflict" },
+  { id = "check-illegal-windows-names" },
+  { id = "check-docstring-first" },
+  { id = "check-executables-have-shebangs" },
+  { id = "check-json" },
+  {
+    id = "check-merge-conflict",
+    args = ["--assume-in-merge"]
+  },
+  { id = "check-shebang-scripts-are-executable" },
+  { id = "check-symlinks" },
+  { id = "check-toml" },
+  { id = "check-vcs-permalinks" },
+  { id = "check-xml" },
+  {
+    id = "check-yaml",
+    args = [
+      "--allow-multiple-documents",
+      "--unsafe"
+    ]
+  },
+  { id = "debug-statements" },
+  { id = "destroyed-symlinks" },
+  { id = "detect-aws-credentials" },
+  { id = "detect-private-key" },
+  { id = "end-of-file-fixer" },
+  { id = "file-contents-sorter" },
+  { id = "fix-byte-order-marker" },
+  # { id = "forbid-new-submodules" },
+  { id = "mixed-line-ending" },
+  {
+    id = "name-tests-test",
+    args = ["--pytest-test-first"],
+    exclude = "^tests/support/schema.py$"
+  },
+  {
+    id = "no-commit-to-branch",
+    args = [
+      "--branch",
+      "main"
+    ]
+  },
+  {
+    id = "pretty-format-json",
+    args = [
+      "--autofix",
+      "--indent=4",
+      "--no-sort-keys"
+    ]
+  },
+  {
+    id = "requirements-txt-fixer",
+    exclude = '^requirements\.txt$'
+  },
+  { id = "sort-simple-yaml" },
+  { id = "trailing-whitespace" }
+]
+
+[[repos]]
+repo = "https://github.com/astral-sh/uv-pre-commit"
+rev = "b17b79c1cab56c3d1025ad36cb117fe602e570fd"  # frozen: 0.11.23
+hooks = [
+  { id = "uv-lock" },
+  { id = "uv-export" }
+]
