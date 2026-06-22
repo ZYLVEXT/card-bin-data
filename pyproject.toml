@@ -1,0 +1,191 @@
+[project]
+name = "card-bin-data"
+version = "0.1.0"
+description = "Library for local BIN/IIN lookup from public CSV datasets."
+readme = "README.md"
+license = "CC-BY-4.0"
+license-files = ["LICENSE"]
+authors = [
+    {name = "Shepilov Vladislav", email = "shepilov.v@proton.mail"},
+]
+maintainers = [
+    {name = "Shepilov Vladislav", email = "shepilov.v@protonmail.com"},
+]
+keywords = [
+    "library", "bin", "binlist",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+requires-python = "<3.15.0,>=3.12.0"
+dependencies = [
+    "advanced-alchemy>=1.11.0",
+    "aiosqlite>=0.22.1",
+    "asyncpg>=0.31.0",
+    "sqlalchemy>=2.0.51",
+]
+
+[project.urls]
+homepage = "https://github.com/ZYLVEXT/card-bin-data"
+documentation = "https://zylvext.github.io/card-bin-data/"
+source = "https://github.com/ZYLVEXT/card-bin-data"
+tracker = "https://github.com/ZYLVEXT/card-bin-data/issues"
+
+[dependency-groups]
+dev = [
+    "commitizen>=4.16.3",
+    "pip-audit>=2.10.1",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "pytest-asyncio>=1.4.0",
+    "pytest-deadfixtures>=3.1.0",
+    "pytest-xdist>=3.8.0",
+    "ruff>=0.15.18",
+    "rust-just>=1.53.0",
+    "ty>=0.0.51",
+    "deptry>=0.25.1",
+    "prek>=0.4.5",
+    "pytest-timeout>=2.4.0",
+    "pytest-databases[postgres]>=0.19.0",
+    "psycopg[binary]>=3.3.4",
+]
+docs = [
+    "mkdocstrings[python]>=1.0.4",
+    "pymdown-extensions>=10.21.3",
+    "zensical>=0.0.46",
+]
+
+[tool.ty.environment]
+# Match project.requires-python minimum for type-checking.
+python-version = "3.12"
+
+[tool.ty.src]
+# Type-check the library and tests only (exclude docs snippets and tooling).
+include = ["src", "tests"]
+
+[tool.deptry]
+experimental_namespace_package = true
+known_first_party = ["card_bin_data"]
+per_rule_ignores = { DEP002 = ["aiosqlite", "asyncpg"] }
+
+[tool.uv]
+default-groups = []
+
+[tool.ruff]
+line-length = 120
+# Assume Python 3.12 to be compatible with typing.
+target-version = "py312"
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".git",
+    ".ruff_cache",
+    "ralph_helpers.py",
+]
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+[tool.ruff.lint]
+preview = true
+select = ["ALL"]
+ignore = [
+    "E501",  # line too long, handled by ruff-format
+    "CPY001",  # Missing copyright notice at top of file
+    "COM812",  # Missing trailing comma
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+
+[tool.pytest.ini_options]
+timeout = 60
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+minversion = "9.0"
+# Cap xdist auto scheduling to keep the async/ASGI-heavy suite stable on macOS.
+# The suite is clean at 8 workers and below, but `-n auto` on 12 logical CPUs
+# reproducibly triggers unraisable socket/event-loop teardown warnings.
+addopts = "-ra -q --strict-markers --maxprocesses=8"
+filterwarnings = [
+    "error",
+    "error:::src",
+]
+
+[tool.coverage.run]
+source = ["src/card_bin_data"]
+branch = true
+parallel = true
+concurrency = ["multiprocessing", "thread"]
+sigterm = true
+
+[tool.coverage.report]
+precision = 1
+fail_under = 100
+include = ["src/card_bin_data/*"]
+omit = [
+    "tests/*",
+]
+exclude_lines = [
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+    # Don't check obviously not implemented
+    "raise NotImplementedError",
+    # We don't really care what happens if fail
+    "except ImportError:",
+    # Don't check for typing-only code
+    "if TYPE_CHECKING:",
+    # Don't check overload-only signatures
+    "^\\s*@overload\\b",
+    "@(typing\\.)?overload",
+    # Don't check placeholder bodies used by overload and structural typing declarations
+    "^\\s*\\.\\.\\.\\s*$",
+    # Don't check Protocol class bodies; they are pure type contracts
+    "^\\s*class \\w+(\\[.*\\])?\\(.*Protocol\\b.*\\):",
+    # Don't check multiline Protocol class bodies; they are pure type contracts
+    "^\\s*class \\w*Protocol(\\[.*\\])?\\(",
+    # Don't check TypedDict class bodies; they are pure type contracts
+    "^\\s*class \\w+\\(.*TypedDict\\b.*\\):",
+    # Don't check PEP 695 type aliases; they are pure type contracts
+    "^\\s*type \\w+\\s*=",
+    # Don't check for code that only runs itself
+    "if __name__ == .__main__.:",
+]
+show_missing = true
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "$version"
+version_scheme = "semver"
+version_provider = "pep621"
+update_changelog_on_bump = false
+major_version_zero = true
+# Refresh lockfile after version files change so uv.lock matches pyproject (prek uv-lock hook).
+pre_bump_hooks = ["uv lock"]
+version_files = [
+    "pyproject.toml:version",
+    "src/card_bin_data/__init__.py:__version__",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/card_bin_data"]
+artifacts = ["src/card_bin_data/py.typed"]

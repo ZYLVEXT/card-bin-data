@@ -1,0 +1,4 @@
+iin_start,iin_end,number_length,number_luhn,scheme,brand,type,prepaid,country,bank_name,bank_logo,bank_url,bank_phone,bank_city
+000123,00012399,16,true,visa,Platinum,credit,false,US,Example Bank,,https://bank.example,+1 555 0100,New York
+123456,,,,mastercard,,debit,,GB,,,https://issuer.example,,
+not-bin,,,,visa,,credit,,US,,,,

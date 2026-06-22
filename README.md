@@ -1,0 +1,187 @@
+# card_bin_data
+
+`card_bin_data` is an async Python library for local BIN/IIN lookup from public CSV
+datasets. It normalizes multiple sources into a SQLite or PostgreSQL database
+and exposes typed lookup results for backend services.
+
+[![Tests](https://github.com/ZYLVEXT/card-bin-data/actions/workflows/1_test.yml/badge.svg?branch=main)](https://github.com/ZYLVEXT/card-bin-data/actions/workflows/1_test.yml)
+[![Coverage](https://codecov.io/gh/ZYLVEXT/card-bin-data/branch/main/graph/badge.svg)](https://codecov.io/gh/ZYLVEXT/card-bin-data)
+[![Downloads](https://static.pepy.tech/personalized-badge/card-bin-data?period=month&units=international_system&left_color=grey&right_color=green&left_text=downloads/month)](https://www.pepy.tech/projects/card-bin-data)
+[![PyPI](https://img.shields.io/pypi/v/card-bin-data.svg?label=PyPI)](https://pypi.org/project/card-bin-data)
+[![Python versions](https://img.shields.io/pypi/pyversions/card-bin-data.svg)](https://pypi.org/project/card-bin-data)
+[![License](https://img.shields.io/github/license/ZYLVEXT/card-bin-data.svg)](https://github.com/ZYLVEXT/card-bin-data/blob/main/LICENSE)
+[![Docs](https://img.shields.io/badge/docs-online-green.svg)](https://zylvext.github.io/card-bin-data/)
+
+Documentation: <https://zylvext.github.io/card-bin-data/>
+
+The MVP is a library only. CLI commands such as `card_bin_data update` and
+`card_bin_data lookup` are post-MVP.
+
+## Install
+
+From a local checkout:
+
+```bash
+uv pip install -e .
+```
+
+The package requires Python 3.12 or newer and uses async SQLAlchemy drivers:
+`sqlite+aiosqlite` for SQLite and `postgresql+asyncpg` for PostgreSQL.
+
+## SQLite Quickstart
+
+```python
+from pathlib import Path
+
+from card_bin_data import BinData, BinDataStore, LookupStatus
+from card_bin_data.sources import (
+    BinlistDataAdapter,
+    MarlonlpBinlistDataAdapter,
+    VenelinkochevBinListDataAdapter,
+)
+
+
+async def run() -> None:
+    store = BinDataStore.from_url("sqlite+aiosqlite:///var/lib/card_bin_data/card_bin_data.db")
+    await store.init()
+
+    await store.import_sources(
+        [
+            BinlistDataAdapter(Path("datasets/binlist_data/ranges.csv")),
+            VenelinkochevBinListDataAdapter(Path("datasets/venelinkochev_binlist_data/bin-list-data.csv")),
+            MarlonlpBinlistDataAdapter(Path("datasets/marlonlp_binlist_data/binlist-data.csv")),
+        ],
+    )
+
+    client = BinData(store=store)
+    result = await client.lookup("12345678")
+
+    if result.status is LookupStatus.FOUND and result.data is not None:
+        print(result.data.scheme, result.data.issuer_name)
+
+    await store.close()
+```
+
+The database URL is always explicit. The library does not read a default path
+or environment variable on its own.
+
+## PostgreSQL Setup
+
+Use PostgreSQL when several services need the same normalized dataset:
+
+```python
+from card_bin_data import BinDataStore
+
+
+store = BinDataStore.from_url("postgresql+asyncpg://card_bin_data_user@localhost/card_bin_data")
+await store.init()
+```
+
+Treat credential-bearing URLs as secrets in application code. `store.database_url`
+masks passwords for display; keep using your original secret configuration value
+for connection setup.
+
+## Lookup Results
+
+`BinData.lookup()` returns a `LookupResult` with one of three statuses:
+
+- `LookupStatus.FOUND`: `data` contains a `BinInfo` value.
+- `LookupStatus.NOT_FOUND`: the input was valid but no record matched.
+- `LookupStatus.INVALID`: the input failed normalization or optional Luhn validation.
+
+Successful results include source attribution:
+
+```python
+result = await client.lookup("12345678")
+
+if result.found:
+    for source in result.sources:
+        print(source.source_id, source.license)
+```
+
+## Import And Update
+
+`BinDataStore` owns schema initialization and write operations:
+
+```python
+await store.init()
+summary = await store.import_sources([primary_adapter, enrichment_adapter, fallback_adapter])
+```
+
+`import_sources()` runs a replace-all import inside one store-managed transaction
+and delegates to `BinDataStore.import_sources_with_session(session, adapters)`.
+By default, provenance rows include each adapter row's raw payload. Pass
+`store_raw_payload=False` to store `{}` in `bin_record_sources.raw_payload`
+instead while keeping `source_row_key` and data-source attribution intact:
+
+```python
+summary = await store.import_sources(
+    [primary_adapter, enrichment_adapter, fallback_adapter],
+    store_raw_payload=False,
+)
+```
+
+Use the bring-your-own-session APIs when your application already owns the
+SQLAlchemy unit of work:
+
+```python
+async with store.session() as session:
+    result = await BinData.lookup_with_session(session, "12345678")
+
+async with store.session_factory.begin() as session:
+    summary = await BinDataStore.import_sources_with_session(session, adapters, store_raw_payload=False)
+```
+
+`lookup()` is read-only and can be shared across concurrent async tasks. The
+store does not keep an in-process write lock; replace-all imports rely on the
+caller's transaction and database locking behavior. SQLite connections use a
+30 second busy timeout so overlapping writers wait before failing. If your
+deployment needs single-writer scheduling across processes or services, enforce
+that in the host application.
+
+## Source Priority And Attribution
+
+The MVP source priority is:
+
+1. `binlist/data` as the primary source.
+2. `venelinkochev/bin-list-data` as enrichment.
+3. `marlonlp/binlist-data` as fallback.
+
+The normalized fields use `scheme` for the card network. In `binlist/data`,
+`brand` maps to `product_brand`; in the two larger datasets, `Brand` or `brand`
+maps to `scheme`.
+
+Public datasets are unofficial, can conflict, and may be stale. `card_bin_data`
+keeps row-level source attribution so callers can inspect which source rows
+contributed to a result. The `venelinkochev` and `marlonlp` sources are
+documented as CC BY 4.0 by their repositories. The final `binlist/data` license
+statement must be verified before public release claims are finalized.
+
+## PAN Safety
+
+Lookup accepts 6-digit BINs, 8-digit IINs, and full card-number-like input.
+Spaces and hyphens are stripped before validation, but only safe prefixes are
+kept in `LookupResult.query`. Full input values are not stored in card_bin_data
+tables and are not returned in result objects.
+
+Luhn validation is disabled by default:
+
+```python
+result = await client.lookup(card_number_from_user, validate_luhn=True)
+```
+
+If `validate_luhn=True` is used with a short BIN/IIN, the result includes a
+validation warning instead of raising. `card_bin_data` is not a PCI validation service
+and does not guarantee card validity.
+
+## Documentation
+
+See the docs in `docs/`:
+
+- `docs/api.md`
+- `docs/backends.md`
+- `docs/sources.md`
+- `docs/security.md`
+- `docs/performance.md`
+
+Runnable examples live in `examples/`.
