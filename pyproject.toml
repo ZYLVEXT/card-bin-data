@@ -1,6 +1,6 @@
 [project]
 name = "card-bin-data"
-version = "0.2.0"
+version = "0.3.0"
 description = "Library for local BIN/IIN lookup from public CSV datasets."
 readme = "README.md"
 license = "CC-BY-4.0"
