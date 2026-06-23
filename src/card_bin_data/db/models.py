@@ -2,12 +2,13 @@
 
 from datetime import datetime
 
-from advanced_alchemy.base import BigIntAuditBase
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .base import CardBinDataBase
 
-class DataSourceModel(BigIntAuditBase):
+
+class DataSourceModel(CardBinDataBase):
     """Upstream data source metadata used for attribution and import idempotency."""
 
     __tablename__ = "data_sources"
@@ -26,7 +27,7 @@ class DataSourceModel(BigIntAuditBase):
     )
 
 
-class BinRecordModel(BigIntAuditBase):
+class BinRecordModel(CardBinDataBase):
     """Normalized BIN/IIN record optimized for exact prefix and range lookup."""
 
     __tablename__ = "bin_records"
@@ -63,7 +64,7 @@ class BinRecordModel(BigIntAuditBase):
     )
 
 
-class BinRecordSourceModel(BigIntAuditBase):
+class BinRecordSourceModel(CardBinDataBase):
     """Link one normalized BIN/IIN record to the source row that contributed data."""
 
     __tablename__ = "bin_record_sources"

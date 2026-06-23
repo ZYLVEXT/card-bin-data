@@ -1,16 +1,22 @@
 """Schema metadata helpers for card_bin_data persistence.
 
-The metadata is backend-neutral SQLAlchemy metadata from Advanced Alchemy models.
-PostgreSQL production deployments should use migrations rather than runtime
+``metadata`` is the private, bind-scoped SQLAlchemy ``MetaData`` owning only the
+card_bin_data tables (see :mod:`card_bin_data.db.base`). It is backend-neutral and
+isolated from advanced_alchemy's shared ``orm_registry`` metadata, so importing
+these models never injects their tables into a host application's default
+metadata. A host that wants Alembic to manage these tables adds this object to
+its ``target_metadata`` (see the Migrations section of the README).
+
+PostgreSQL production deployments should use those migrations rather than runtime
 ``create_all`` so index and constraint operations can be scheduled safely.
 """
 
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from .models import BinRecordModel
+from .base import CardBinDataBase
 
-metadata: MetaData = BinRecordModel.metadata
+metadata: MetaData = CardBinDataBase.metadata
 
 
 async def create_schema(engine: AsyncEngine) -> None:
