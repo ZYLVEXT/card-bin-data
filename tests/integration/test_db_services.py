@@ -1,5 +1,5 @@
 """Integration coverage for Advanced Alchemy model services on every supported backend."""
-# ruff: noqa: S101
+# ruff: file-ignore[assert]
 
 from __future__ import annotations
 

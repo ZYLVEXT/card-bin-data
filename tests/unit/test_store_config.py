@@ -1,5 +1,5 @@
 """Unit coverage for BinDataStore configuration behavior."""
-# ruff: noqa: S101, SLF001
+# ruff: file-ignore[assert, private-member-access]
 
 from typing import cast
 

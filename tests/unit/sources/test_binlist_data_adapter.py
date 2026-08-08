@@ -1,5 +1,5 @@
 """Tests for the binlist/data ranges CSV adapter."""
-# ruff: noqa: S101
+# ruff: file-ignore[assert]
 
 from __future__ import annotations
 

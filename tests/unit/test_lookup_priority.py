@@ -1,5 +1,5 @@
-"""Unit coverage for lookup query priority."""
-# ruff: noqa: S101
+"""Unit coverage for the single-statement lookup priority."""
+# ruff: file-ignore[assert]
 
 from __future__ import annotations
 
@@ -16,15 +16,20 @@ if TYPE_CHECKING:
     from sqlalchemy import Select
     from sqlalchemy.ext.asyncio import AsyncSession
 
-EXACT_AND_RANGE_ATTEMPTS = 2
-ALL_LOOKUP_ATTEMPTS = 3
-
 
 @dataclass(slots=True)
 class ScalarResultStub:
-    """Small scalar result stub for lookup priority tests."""
+    """Small unique scalar result stub for lookup priority tests."""
 
     record: BinRecordModel | None
+
+    def unique(self) -> ScalarResultStub:
+        """Mirror SQLAlchemy's collection eager-load de-duplication step.
+
+        Returns:
+            This result stub.
+        """
+        return self
 
     def one_or_none(self) -> BinRecordModel | None:
         """Return the configured lookup row."""
@@ -32,13 +37,13 @@ class ScalarResultStub:
 
 
 class SessionStub:
-    """Async session stub that records statement attempts and returns configured rows."""
+    """Async session stub that records the lookup statement and returns one row."""
 
-    def __init__(self, records: tuple[BinRecordModel | None, ...]) -> None:
-        """Initialize the stub with rows returned for each lookup attempt."""
+    def __init__(self, record: BinRecordModel | None) -> None:
+        """Initialize the stub with the ranked lookup result."""
         self.bind = None
         self.info: dict[str, object] = {}
-        self._records = list(records)
+        self._record = record
         self.statements: list[Select[tuple[BinRecordModel]]] = []
 
     @staticmethod
@@ -53,7 +58,7 @@ class SessionStub:
             Scalar result stub carrying the next configured record.
         """
         self.statements.append(statement)
-        return ScalarResultStub(self._records.pop(0))
+        return ScalarResultStub(self._record)
 
 
 class BindStub:
@@ -63,9 +68,9 @@ class BindStub:
 
 
 @pytest.mark.asyncio
-async def test_exact_eight_digit_match_stops_before_range_and_six_digit_lookup() -> None:
-    """Exact 8-digit matches are attempted first and short-circuit later fallbacks."""
-    session = SessionStub((_record("45717360"),))
+async def test_eight_digit_lookup_ranks_exact_range_and_six_digit_fallback_in_one_statement() -> None:
+    """A single statement ranks exact 8, range, and exact 6 matches in that order."""
+    session = SessionStub(_record("45717360"))
 
     result = await BinRecordService(session=cast("AsyncSession", session)).lookup_record(
         LookupQuery(prefix="45717360", candidates=("45717360", "457173")),
@@ -74,56 +79,51 @@ async def test_exact_eight_digit_match_stops_before_range_and_six_digit_lookup()
     assert result is not None
     assert result.iin_start == "45717360"
     assert len(session.statements) == 1
+    sql = _statement_sql(session.statements[0])
+    assert "CASE WHEN (bin_records.iin_start = '45717360') THEN 0" in sql
+    assert "bin_records.range_start_8 <= '45717360'" in sql
+    assert "bin_records.range_end_8 >= '45717360'" in sql
+    assert "WHEN (bin_records.iin_start = '457173') THEN 2 ELSE 3 END" in sql
+    assert "ORDER BY CASE" in sql
+    assert "length(bin_records.iin_start) DESC, bin_records.iin_start DESC, bin_records.id" in sql
 
 
 @pytest.mark.asyncio
-async def test_range_match_runs_before_exact_six_digit_lookup() -> None:
-    """Range matching is attempted after exact 8-digit and before exact 6-digit fallback."""
-    session = SessionStub((None, _record("45717300", iin_end="45717399")))
+async def test_six_digit_lookup_uses_one_exact_match_statement() -> None:
+    """A six-digit-only query stays on the same one-statement path."""
+    session = SessionStub(_record("457173"))
 
     result = await BinRecordService(session=cast("AsyncSession", session)).lookup_record(
-        LookupQuery(prefix="45717361", candidates=("45717361", "457173")),
-    )
-
-    assert result is not None
-    assert result.iin_start == "45717300"
-    assert len(session.statements) == EXACT_AND_RANGE_ATTEMPTS
-    assert _statement_sql(session.statements[0]).count("bin_records.iin_start = '45717361'") == 1
-    assert "bin_records.range_start_8 <= '45717361'" in _statement_sql(session.statements[1])
-    assert "bin_records.range_end_8 >= '45717361'" in _statement_sql(session.statements[1])
-
-
-@pytest.mark.asyncio
-async def test_exact_six_digit_match_resolves_when_more_specific_data_is_absent() -> None:
-    """Six-digit fallback is used only after exact 8-digit and range lookup miss."""
-    session = SessionStub((None, None, _record("457173")))
-
-    result = await BinRecordService(session=cast("AsyncSession", session)).lookup_record(
-        LookupQuery(prefix="45717361", candidates=("45717361", "457173")),
+        LookupQuery(prefix="457173", candidates=("457173",)),
     )
 
     assert result is not None
     assert result.iin_start == "457173"
-    assert len(session.statements) == ALL_LOOKUP_ATTEMPTS
-    assert _statement_sql(session.statements[0]).count("bin_records.iin_start = '45717361'") == 1
-    assert "bin_records.range_start_8 <= '45717361'" in _statement_sql(session.statements[1])
-    assert "bin_records.range_end_8 >= '45717361'" in _statement_sql(session.statements[1])
-    assert _statement_sql(session.statements[2]).count("bin_records.iin_start = '457173'") == 1
+    assert len(session.statements) == 1
+    assert "bin_records.iin_start = '457173'" in _statement_sql(session.statements[0])
 
 
-def test_range_statement_uses_normalized_boundaries_and_specificity_ordering() -> None:
-    """Range lookup compares normalized 8-digit boundaries and prefers more-specific ranges."""
-    sql = _statement_sql(BinRecordService._range_statement("40050050"))  # noqa: SLF001
+@pytest.mark.asyncio
+async def test_eight_digit_only_candidate_uses_exact_and_range_conditions() -> None:
+    """The query layer accepts a direct 8-digit candidate without a 6-digit fallback."""
+    session = SessionStub(None)
 
-    assert "bin_records.range_start_8 <= '40050050'" in sql
-    assert "bin_records.range_end_8 >= '40050050'" in sql
-    assert "ORDER BY length(bin_records.iin_start) DESC, bin_records.iin_start DESC, bin_records.id" in sql
+    result = await BinRecordService(session=cast("AsyncSession", session)).lookup_record(
+        LookupQuery(prefix="45717360", candidates=("45717360",)),
+    )
+
+    assert result is None
+    assert len(session.statements) == 1
+    sql = _statement_sql(session.statements[0])
+    assert "bin_records.iin_start = '45717360'" in sql
+    assert "bin_records.range_start_8 <= '45717360'" in sql
+    assert "THEN 2" not in sql
 
 
 @pytest.mark.asyncio
 async def test_lookup_without_supported_candidate_returns_none_without_querying() -> None:
     """Unsupported candidate lengths are ignored by the query layer."""
-    session = SessionStub(())
+    session = SessionStub(None)
 
     result = await BinRecordService(session=cast("AsyncSession", session)).lookup_record(
         LookupQuery(prefix="", candidates=()),

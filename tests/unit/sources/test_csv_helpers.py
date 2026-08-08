@@ -1,11 +1,11 @@
 """Tests for shared CSV field normalization helpers."""
-# ruff: noqa: S101
+# ruff: file-ignore[assert]
 
 from __future__ import annotations
 
 import pytest
 
-from card_bin_data.sources._csv import optional_int  # noqa: PLC2701
+from card_bin_data.sources._csv import optional_int  # ruff: ignore[import-private-name]
 
 
 @pytest.mark.parametrize("value", ["", "   ", None])

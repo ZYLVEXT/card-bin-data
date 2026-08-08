@@ -8,7 +8,7 @@ from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
-from ..exceptions import CardBinDataStoreConfigurationError  # noqa: TID252
+from ..exceptions import CardBinDataStoreConfigurationError  # ruff: ignore[relative-imports]
 
 SUPPORTED_DRIVER_NAMES = frozenset({"sqlite+aiosqlite", "postgresql+asyncpg"})
 SQLITE_BUSY_TIMEOUT_SECONDS = 30.0
@@ -78,11 +78,11 @@ def make_async_engine(config: StoreDatabaseConfig) -> AsyncEngine:
     """
     if config.drivername == "sqlite+aiosqlite":
         return create_async_engine(
-            config._connection_string,  # noqa: SLF001
+            config._connection_string,  # ruff: ignore[private-member-access]
             connect_args={"timeout": SQLITE_BUSY_TIMEOUT_SECONDS},
         )
 
-    return create_async_engine(config._connection_string)  # noqa: SLF001
+    return create_async_engine(config._connection_string)  # ruff: ignore[private-member-access]
 
 
 def make_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:

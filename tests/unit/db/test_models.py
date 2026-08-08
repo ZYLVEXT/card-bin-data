@@ -1,5 +1,5 @@
 """Unit coverage for card_bin_data persistence model metadata."""
-# ruff: noqa: S101
+# ruff: file-ignore[assert]
 
 from sqlalchemy import String, UniqueConstraint
 from sqlalchemy.schema import Table

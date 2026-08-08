@@ -54,6 +54,9 @@ result = await client.lookup("12345678")
 The database URL is required. `card_bin_data` does not silently choose a database
 file or read environment variables for you.
 
+Dataset files are external deployment inputs rather than package artifacts.
+Provision them separately and pass explicit paths to the built-in adapters.
+
 ## Data Caveat
 
 The bundled public datasets are unofficial community datasets. They can be

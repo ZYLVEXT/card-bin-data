@@ -173,13 +173,3 @@ pyrightconfig.json
 
 .env
 .uv-cache
-
-# AI agents
-PRD.md
-AGENTS.md
-CLAUDE.md
-TECHSTACK.md
-.agents/
-.claude/
-.cursor/
-.codegraph/

@@ -1,5 +1,5 @@
 """Tests for the marlonlp/binlist-data semicolon CSV adapter."""
-# ruff: noqa: S101
+# ruff: file-ignore[assert]
 
 from __future__ import annotations
 

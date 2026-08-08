@@ -1,5 +1,5 @@
 """Integration coverage for source import and merge pipeline on every supported backend."""
-# ruff: noqa: S101, SLF001
+# ruff: file-ignore[assert, private-member-access]
 
 from __future__ import annotations
 

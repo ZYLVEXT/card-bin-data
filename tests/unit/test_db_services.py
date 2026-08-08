@@ -1,5 +1,5 @@
 """Unit coverage for card_bin_data Advanced Alchemy services."""
-# ruff: noqa: S101, SLF001
+# ruff: file-ignore[assert, private-member-access]
 
 from __future__ import annotations
 

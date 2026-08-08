@@ -1,4 +1,4 @@
-# ruff: noqa: INP001, T201
+# ruff: file-ignore[implicit-namespace-package, print]
 """Run a small PostgreSQL card_bin_data import and lookup example."""
 
 from __future__ import annotations

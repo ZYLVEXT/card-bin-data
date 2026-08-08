@@ -86,7 +86,11 @@ These controls live in deployment and CI configuration, not in library code:
   for local, dev, and test databases. For production PostgreSQL, manage schema
   with reviewed migrations (Alembic) rather than runtime DDL.
 - **Dependency scanning.** `pip-audit` is included as a development dependency;
-  run it in CI so the build fails on a known-vulnerable dependency.
+  CI audits the exported lockfile with hashes and fails on a known-vulnerable
+  dependency.
+- **Release inventory.** Wheel and source-distribution manifests are allowlisted
+  and verified before publishing. Local datasets, repository automation, and
+  checkout-only files cannot enter release artifacts.
 - **Source-data trust.** Adapters read whatever local CSV path they are given.
   CSV rows are streamed in bounded batches and import uses on-disk SQLite
   staging, but paths should still point only at trusted dataset files; do not

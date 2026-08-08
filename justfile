@@ -5,11 +5,8 @@
 # Idempotent: rewrites the .pth file each run because `uv sync --frozen` may
 # rebuild the venv from scratch.
 setup:
-    uv sync --frozen --all-extras --group dev
-    @uv run python -c "import sysconfig, pathlib; \
-        p = pathlib.Path(sysconfig.get_paths()['purelib']) / 'coverage_subprocess.pth'; \
-        p.write_text('import coverage; coverage.process_startup()\n'); \
-        print(f'Installed coverage subprocess hook at {p}')"
+    uv sync --frozen --all-extras --group dev --group docs
+    @uv run --no-sync python scripts/install_coverage_hook.py
 
 # Run the full pytest suite under coverage.
 # COVERAGE_PROCESS_START activates the coverage_subprocess.pth hook (installed
@@ -17,50 +14,59 @@ setup:
 # import-time class/function definitions are measured even when pytest-cov
 # imports `card_bin_data` early during plugin discovery.
 test:
-    COVERAGE_PROCESS_START=pyproject.toml uv run pytest --cov=src/card_bin_data --cov-report=term-missing --cov-fail-under=100 -n auto
+    COVERAGE_PROCESS_START=pyproject.toml uv run --no-sync pytest -n 0 --cov=card_bin_data --cov-branch --cov-report=term-missing --cov-fail-under=100
 
 # Lint the codebase and apply safe Ruff fixes.
 lint:
-    uv run ruff check --fix .
+    uv run --no-sync ruff check --fix .
 
 # Format the codebase with Ruff.
 format:
-    uv run ruff format .
+    uv run --no-sync ruff format --preview .
 
 # Check formatting without changing files.
 format-check:
-    uv run ruff format --check .
+    uv run --no-sync ruff format --preview --check .
 
 # Run static type checks with ty.
 typecheck:
-    uv run ty check
+    uv run --no-sync ty check
+
+# Validate immutable GitHub Action and Docker image references.
+pin-check:
+    uv run --no-sync python scripts/validate_dependency_pins.py
+
+# Validate declared runtime dependencies.
+deptry-check:
+    uv run --no-sync deptry .
 
 # Audit dependencies for known vulnerabilities and dependency issues.
 audit:
-    uv run pip-audit
-    uv run deptry .
+    uv run --no-sync python scripts/audit_dependencies.py
+    uv run --no-sync deptry .
 
 # Build source and wheel distributions.
 build:
-    uv build
+    uv run --no-sync python scripts/release_artifacts.py build --dist-dir dist
 
 # Serve documentation locally (Zensical, config in zensical.toml).
 docs-serve:
-    uv run --group docs zensical serve
+    uv run --frozen --group docs zensical serve
 
 # Build static documentation site.
 docs-build:
-    uv run --group docs zensical build
+    uv run --frozen --group docs zensical build --clean
 
 # Run all configured prek hooks.
 prek:
-    uv run prek run --all-files
+    uv run --no-sync prek run --show-diff-on-failure --color=always --all-files
 
 # Run CI-style checks without auto-fixing files.
 check:
-    uv run ruff check .
-    uv run ruff format --check .
-    uv run ty check
+    uv run --no-sync ruff check .
+    uv run --no-sync ruff format --preview --check .
+    uv run --no-sync ty check
+    uv run --no-sync python scripts/validate_dependency_pins.py
 
 # Alias for the dependency audit command.
 security: audit
