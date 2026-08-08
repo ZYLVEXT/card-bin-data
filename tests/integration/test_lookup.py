@@ -1,5 +1,5 @@
 """Integration coverage for indexed lookup behavior on every supported backend."""
-# ruff: noqa: S101
+# ruff: file-ignore[assert]
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import pytest
+from sqlalchemy import event
 
 from card_bin_data import BinData
 from card_bin_data.types import LookupStatus, NormalizedSourceRecord, SourceMetadata
@@ -182,6 +183,32 @@ async def test_lookup_priority_statuses_attribution_and_pan_safety(store: BinDat
     assert full_pan.query.is_full_pan_input is True
     assert "4571736012345678" not in repr(full_pan)
     assert "4571 7360 1234 5678" not in repr(full_pan)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_valid_lookup_uses_one_database_statement(store: BinDataStore) -> None:
+    """Exact, range, fallback, and not-found lookups each use one SQL round-trip."""
+    client = BinData(store=store)
+    await store.init()
+    await store.import_sources(_lookup_fixture_adapters())
+    statement_count = 0
+
+    def count_statement(*_args: object) -> None:
+        nonlocal statement_count
+        statement_count += 1
+
+    event.listen(store.engine.sync_engine, "before_cursor_execute", count_statement)
+    try:
+        for query in ("45717360", "45717361", "12345678", "999999"):
+            before = statement_count
+            await client.lookup(query)
+            assert statement_count - before == 1
+
+        before = statement_count
+        await client.lookup("12345")
+        assert statement_count == before
+    finally:
+        event.remove(store.engine.sync_engine, "before_cursor_execute", count_statement)
 
 
 def _lookup_fixture_adapters() -> tuple[SourceAdapter, ...]:

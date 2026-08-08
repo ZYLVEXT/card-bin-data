@@ -1,5 +1,5 @@
 """Unit coverage for source merge priority."""
-# ruff: noqa: S101
+# ruff: file-ignore[assert]
 
 from __future__ import annotations
 

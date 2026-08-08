@@ -1,5 +1,5 @@
 """Unit coverage for card_bin_data Advanced Alchemy services."""
-# ruff: noqa: S101, SLF001
+# ruff: file-ignore[assert, private-member-access]
 
 from __future__ import annotations
 
@@ -418,15 +418,16 @@ async def test_imported_records_service_streams_empty_record_sequence() -> None:
 
 def test_data_source_values_serializes_local_path_and_preserves_none() -> None:
     """Data source mapping converts a local Path to str and keeps absent fields as None."""
+    local_path = Path("/data/binlist/ranges.csv")
     with_path = ImportedRecordsService._data_source_values(
         SourceMetadata(
             "binlist/data",
             "binlist/data",
             "https://github.com/binlist/data.git",
-            local_path=Path("/data/binlist/ranges.csv"),
+            local_path=local_path,
         ),
     )
-    assert with_path["local_path"] == "/data/binlist/ranges.csv"
+    assert with_path["local_path"] == str(local_path)
     assert isinstance(with_path["local_path"], str)
     assert with_path["license"] is None
 

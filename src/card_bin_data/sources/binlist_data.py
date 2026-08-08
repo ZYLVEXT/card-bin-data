@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ..types import NormalizedSourceRecord, SourceMetadata  # noqa: TID252
+from ..types import NormalizedSourceRecord, SourceMetadata  # ruff: ignore[relative-imports]
 from ._csv import is_numeric_prefix, iter_csv_records, none_if_empty, optional_bool, optional_int, row_key
 
 if TYPE_CHECKING:

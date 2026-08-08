@@ -10,14 +10,21 @@ session, and asks `BinRecordService` for the best matching normalized record.
 Use `BinData.lookup_with_session(session, value, validate_luhn=...)` when a
 host application already owns the `AsyncSession`.
 
+The package root defers the database-backed `BinData` and `BinDataStore`
+facades. Importing metadata, exceptions, or result types does not initialize
+SQLAlchemy or either async database driver.
+
 Lookup priority:
 
 1. Exact 8-digit match.
 2. Range match using `iin_start` and `iin_end`.
 3. Exact 6-digit match.
 
-The query path uses indexed database columns and does not load the full dataset
-into memory for each request.
+All three priorities are expressed in one ranked SQL statement. A valid lookup,
+including a not-found result, therefore uses one database round-trip while
+collection eager loading returns source attribution in that same statement.
+The query uses indexed database columns and never loads the full dataset into
+memory.
 
 ## SQLite Target
 
@@ -46,18 +53,18 @@ Import/update is transactional and replace-style. It collects normalized source
 records, merges them by `iin_start`, stores normalized records, and stores
 source provenance.
 
-The current CSV adapter interface is async for consistency with the import
-pipeline, but it is not end-to-end row streaming. Each built-in CSV adapter reads
-and normalizes its local file on a worker thread, materializes that adapter's
-records, then yields those records through `iter_records()`. The importer then
-collects all adapter records into one tuple before merge and persistence, and
-the merge step groups records by `iin_start` in memory.
+The built-in CSV adapters parse on worker threads in bounded batches. The import
+pipeline writes those batches to a private, temporary, on-disk SQLite staging
+table, reads them back in indexed `iin_start` order, and merges only the current
+prefix family in memory. Final records and provenance are inserted into the
+configured backend in bounded batches. The temporary stage is closed and
+removed whether the import succeeds or fails.
 
 Expect import/update to be more expensive than lookup:
 
 - It may take seconds on current public datasets.
-- It needs enough memory for the normalized adapter rows, merge groups, and
-  provenance rows during the import step.
+- Its memory use is bounded by batch size and the active duplicate/prefix group,
+  rather than by the total source dataset size.
 - It writes the full imported dataset and provenance rows.
 
 Run imports outside latency-sensitive request paths.

@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any, cast
 
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
-from sqlalchemy import JSON, bindparam, delete, desc, func, insert, select
-from sqlalchemy.orm import selectinload
+from sqlalchemy import JSON, and_, bindparam, case, delete, desc, func, insert, or_, select
+from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import cast as sql_cast
 
 from .models import BinRecordModel, BinRecordSourceModel, DataSourceModel
@@ -75,51 +75,51 @@ class BinRecordService(SQLAlchemyAsyncRepositoryService[BinRecordModel]):
             (candidate for candidate in query.candidates if len(candidate) == EIGHT_DIGIT_PREFIX_LENGTH),
             None,
         )
-        if exact_8_candidate is not None:
-            exact_8 = await self._first_record(self._exact_prefix_statement(exact_8_candidate))
-            if exact_8 is not None:
-                return exact_8
-
-            range_match = await self._first_record(self._range_statement(exact_8_candidate))
-            if range_match is not None:
-                return range_match
-
         exact_6_candidate = next(
             (candidate for candidate in query.candidates if len(candidate) == SIX_DIGIT_PREFIX_LENGTH),
             None,
         )
-        if exact_6_candidate is None:
+        if exact_8_candidate is None and exact_6_candidate is None:
             return None
 
-        return await self._first_record(self._exact_prefix_statement(exact_6_candidate))
-
-    @classmethod
-    def _exact_prefix_statement(cls, prefix: str) -> Select[tuple[BinRecordModel]]:
-        return (
-            cls._base_record_statement().where(BinRecordModel.iin_start == prefix).order_by(BinRecordModel.id).limit(1)
-        )
-
-    @classmethod
-    def _range_statement(cls, prefix: str) -> Select[tuple[BinRecordModel]]:
-        return (
-            cls._base_record_statement()
-            .where(
-                BinRecordModel.range_start_8.is_not(None),
-                BinRecordModel.range_start_8 <= prefix,
-                BinRecordModel.range_end_8 >= prefix,
-            )
-            .order_by(desc(func.length(BinRecordModel.iin_start)), desc(BinRecordModel.iin_start), BinRecordModel.id)
-            .limit(1)
-        )  # fmt: skip
+        statement = self._lookup_statement(exact_8_candidate, exact_6_candidate)
+        return (await self.repository.session.scalars(statement)).unique().one_or_none()
 
     @staticmethod
-    def _base_record_statement() -> Select[tuple[BinRecordModel]]:
-        return select(BinRecordModel).options(
-            selectinload(BinRecordModel.sources).selectinload(BinRecordSourceModel.data_source),
-        )
+    def _lookup_statement(
+        exact_8_candidate: str | None,
+        exact_6_candidate: str | None,
+    ) -> Select[tuple[BinRecordModel]]:
+        conditions: list[ColumnElement[bool]] = []
+        priority: list[tuple[ColumnElement[bool], int]] = []
 
-    async def _first_record(self, statement: Select[tuple[BinRecordModel]]) -> BinRecordModel | None:
-        return (await self.repository.session.scalars(statement)).one_or_none()
+        if exact_8_candidate is not None:
+            exact_8 = BinRecordModel.iin_start == exact_8_candidate
+            range_8 = and_(
+                BinRecordModel.range_start_8.is_not(None),
+                BinRecordModel.range_start_8 <= exact_8_candidate,
+                BinRecordModel.range_end_8 >= exact_8_candidate,
+            )
+            conditions.extend((exact_8, range_8))
+            priority.extend(((exact_8, 0), (range_8, 1)))
+
+        if exact_6_candidate is not None:
+            exact_6 = BinRecordModel.iin_start == exact_6_candidate
+            conditions.append(exact_6)
+            priority.append((exact_6, 2))
+
+        return (
+            select(BinRecordModel)
+            .options(joinedload(BinRecordModel.sources).joinedload(BinRecordSourceModel.data_source))
+            .where(or_(*conditions))
+            .order_by(
+                case(*priority, else_=3),
+                desc(func.length(BinRecordModel.iin_start)),
+                desc(BinRecordModel.iin_start),
+                BinRecordModel.id,
+            )
+            .limit(1)
+        )
 
 
 class BinRecordSourceService(SQLAlchemyAsyncRepositoryService[BinRecordSourceModel]):

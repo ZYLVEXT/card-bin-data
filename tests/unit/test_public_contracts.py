@@ -1,5 +1,5 @@
 """Tests for card_bin_data public typed contracts."""
-# ruff: noqa: S101
+# ruff: file-ignore[assert]
 
 from __future__ import annotations
 

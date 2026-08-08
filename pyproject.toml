@@ -39,26 +39,27 @@ tracker = "https://github.com/ZYLVEXT/card-bin-data/issues"
 
 [dependency-groups]
 dev = [
-    "commitizen>=4.16.3",
-    "pip-audit>=2.10.1",
-    "pytest>=9.1.1",
-    "pytest-cov>=7.1.0",
-    "pytest-asyncio>=1.4.0",
-    "pytest-deadfixtures>=3.1.0",
-    "pytest-xdist>=3.8.0",
-    "ruff>=0.15.18",
-    "rust-just>=1.53.0",
-    "ty>=0.0.51",
+    "commitizen>=4.17.0",
     "deptry>=0.25.1",
-    "prek>=0.4.5",
-    "pytest-timeout>=2.4.0",
-    "pytest-databases[postgres]>=0.19.0",
+    "pip-audit>=2.10.1",
+    "prek>=0.4.12",
     "psycopg[binary]>=3.3.4",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "pytest-databases[postgres]>=0.19.0",
+    "pytest-deadfixtures>=3.1.0",
+    "pytest-timeout>=2.4.0",
+    "pytest-xdist>=3.8.0",
+    "pyyaml>=6.0.3,<7.0",
+    "ruff>=0.16.2",
+    "rust-just>=1.58.0",
+    "ty>=0.0.69",
 ]
 docs = [
-    "mkdocstrings[python]>=1.0.4",
-    "pymdown-extensions>=10.21.3",
-    "zensical>=0.0.46",
+    "mkdocstrings[python]>=1.0.6",
+    "pymdown-extensions>=11.0.1",
+    "zensical>=0.0.53",
 ]
 
 [tool.ty.environment]
@@ -72,7 +73,11 @@ include = ["src", "tests"]
 [tool.deptry]
 experimental_namespace_package = true
 known_first_party = ["card_bin_data"]
-per_rule_ignores = { DEP002 = ["aiosqlite", "asyncpg"] }
+
+[tool.deptry.per_rule_ignores]
+# Async drivers are selected by SQLAlchemy URLs; PyYAML is repository-tooling only.
+DEP002 = ["aiosqlite", "asyncpg"]
+DEP004 = ["yaml"]
 
 [tool.uv]
 default-groups = []
@@ -85,6 +90,7 @@ target-version = "py312"
 exclude = [
     ".git",
     ".ruff_cache",
+    "datasets",  # Upstream data snapshots are not maintained as project source.
     "ralph_helpers.py",
 ]
 
@@ -102,9 +108,9 @@ line-ending = "auto"
 preview = true
 select = ["ALL"]
 ignore = [
-    "E501",  # line too long, handled by ruff-format
-    "CPY001",  # Missing copyright notice at top of file
-    "COM812",  # Missing trailing comma
+    "line-too-long",  # line too long, handled by ruff-format
+    "missing-copyright-notice",  # Missing copyright notice at top of file
+    "missing-trailing-comma",  # Missing trailing comma
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -183,9 +189,23 @@ version_files = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/card_bin_data"]
 artifacts = ["src/card_bin_data/py.typed"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/CHANGELOG.md",
+    "/LICENSE",
+    "/README.md",
+    "/docs",
+    "/examples",
+    "/pyproject.toml",
+    "/scripts",
+    "/src/card_bin_data",
+    "/tests",
+    "/zensical.toml",
+]

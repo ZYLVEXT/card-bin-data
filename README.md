@@ -19,11 +19,15 @@ The MVP is a library only. CLI commands such as `card_bin_data update` and
 
 ## Install
 
-From a local checkout:
+Install the published library:
 
 ```bash
-uv pip install -e .
+uv add card-bin-data
 ```
+
+Dataset files are deployment inputs and are not bundled into wheel or source
+distributions. Clone or provision the upstream datasets separately and pass
+their explicit paths to the adapters.
 
 The package requires Python 3.12 or newer and uses async SQLAlchemy drivers:
 `sqlite+aiosqlite` for SQLite and `postgresql+asyncpg` for PostgreSQL.
@@ -64,6 +68,10 @@ async def run() -> None:
 
 The database URL is always explicit. The library does not read a default path
 or environment variable on its own.
+
+The metadata and result types at the package root remain lightweight. SQLAlchemy
+and the database drivers are loaded only when `BinData` or `BinDataStore` is
+first requested.
 
 ## PostgreSQL Setup
 

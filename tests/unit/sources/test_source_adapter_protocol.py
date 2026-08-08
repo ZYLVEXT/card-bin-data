@@ -1,5 +1,5 @@
 """Tests for source adapter protocol contracts."""
-# ruff: noqa: S101
+# ruff: file-ignore[assert]
 
 from __future__ import annotations
 

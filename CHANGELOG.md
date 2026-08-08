@@ -1,3 +1,12 @@
+## Unreleased
+
+### Changed
+
+- Keep the package root lightweight by loading database-backed facades lazily.
+- Resolve exact, range, and fallback lookups with one ranked SQL statement.
+- Harden source-distribution inventory and the verified release pipeline.
+- Refresh the Python, uv, prek, CI, documentation, and security-audit toolchain.
+
 ## 0.3.0 (2026-06-23)
 
 ### Feat
