@@ -173,3 +173,8 @@ pyrightconfig.json
 
 .env
 .uv-cache
+
+# VVAH / agentic hunt artifacts (never commit)
+security-scan/
+security-remediation/
+run_manifest.json
