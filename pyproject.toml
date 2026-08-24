@@ -39,10 +39,10 @@ tracker = "https://github.com/ZYLVEXT/card-bin-data/issues"
 
 [dependency-groups]
 dev = [
-    "commitizen>=4.17.0",
+    "commitizen>=4.18.0",
     "deptry>=0.25.1",
     "pip-audit>=2.10.1",
-    "prek>=0.4.12",
+    "prek>=0.4.14",
     "psycopg[binary]>=3.3.4",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
@@ -52,14 +52,14 @@ dev = [
     "pytest-timeout>=2.4.0",
     "pytest-xdist>=3.8.0",
     "pyyaml>=6.0.3,<7.0",
-    "ruff>=0.16.2",
+    "ruff>=0.16.4",
     "rust-just>=1.58.0",
-    "ty>=0.0.69",
+    "ty>=0.0.74",
 ]
 docs = [
     "mkdocstrings[python]>=1.0.6",
-    "pymdown-extensions>=11.0.1",
-    "zensical>=0.0.53",
+    "pymdown-extensions>=11.0.2",
+    "zensical>=0.0.57",
 ]
 
 [tool.ty.environment]
@@ -189,7 +189,7 @@ version_files = [
 ]
 
 [build-system]
-requires = ["hatchling==1.31.0"]
+requires = ["hatchling==1.32.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
