@@ -1,0 +1,7 @@
+---
+engines:
+  trivy:
+    exclude_paths:
+      - "tests/**"
+exclude_paths:
+  - "datasets/**"
